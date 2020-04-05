@@ -4,6 +4,7 @@ from django.http import HttpResponse
 from .models import *
 import inspect
 from .forms import OrderForm
+from django.forms import inlineformset_factory
 
 # Create your views here.
 
@@ -50,20 +51,22 @@ def customers(request, pk_test):
     return render(request, 'accounts/customer.html', context)
 
 
-def createOrder(request):
-    form = OrderForm()
+def createOrder(request, pk):
+    orderFormSet = inlineformset_factory(
+        Customer, Order, fields=('product', 'status'), extra=10)
+    customer = Customer.objects.get(id=pk)
+    formset = orderFormSet(queryset=Order.objects.none(), instance=customer)
+    # formset = OrderForm(initial={'customer': customer})
 
     if request.method == 'POST':
         # print('Printing POST":', request.POST)
-        form = OrderForm(request.POST)
-        if form.is_valid():
-            form.save()
+        formset = orderFormSet(request.POST, instance=customer)
+        if formset.is_valid():
+            formset.save()
             return redirect('/')
+            # return redirect("{% url 'customer' customer.id %}")
 
-    form = OrderForm()
-    context = {
-        'form': form
-    }
+    context = {'formset': formset}
     return render(request, 'accounts/order_form.html', context)
 
 
